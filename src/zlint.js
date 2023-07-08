@@ -8,17 +8,12 @@ linter.defineRule("my-custom-rule", {
     messages: {
       unexpected: "Unexpected console statement.",
     },
+    fixable: true
   },
   create(context) {
     const options = context.options[0] || {};
     const allowed = options.allow || [];
 
-    /**
-     * Checks whether the given reference is 'console' or not.
-     *
-     * @param {eslint-scope.Reference} reference - The reference to check.
-     * @returns {boolean} `true` if the reference is 'console'.
-     */
     function isConsole(reference) {
       const id = reference.identifier;
 
@@ -70,6 +65,9 @@ linter.defineRule("my-custom-rule", {
         node,
         loc: node.loc,
         messageId: "unexpected",
+        fix(fixer) {
+          return fixer.replaceText(reference.identifier, "pop");
+        },
       });
     }
 
@@ -88,20 +86,15 @@ linter.defineRule("my-custom-rule", {
           ? consoleVar.references
           : scope.through.filter(isConsole);
 
-        if (!shadowed) {
+        if (!shadowed && references) {
           references.filter(isMemberAccessExceptAllowed).forEach(report);
         }
       },
     };
   },
 });
-let codeText = `
-var foo
-var b
-console.log(b);
-`;
 
-codeText = `
+let codeText = `
 function doSomething(condition) {
   if (condition) {
     return 1
@@ -113,19 +106,20 @@ class B extends A {
   constructor() { }  // Would throw a ReferenceError.
 }
 `;
-codeText=`
+codeText = `
 let a=3
-`
+console.log(b)
+`;
 const messages = linter.verifyAndFix(codeText.replace(/^\s*|\s*$/g, ""), {
-  env:{
-    es6:true
+  env: {
+    es6: true,
   },
   rules: {
     "consistent-return": 2,
     "no-unreachable": 2,
     "constructor-super": 2,
-    "semi": 2,
-    // "my-custom-rule": "error",
+    semi: 2,
+    "my-custom-rule": "error",
   },
 });
 
